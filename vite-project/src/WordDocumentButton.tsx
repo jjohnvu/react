@@ -1,35 +1,48 @@
-import React, { ChangeEvent, useState } from 'react';
+// WordDocumentButton.tsx
+import React, { ChangeEvent } from 'react';
 
-const WordDocumentButton: React.FC = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+interface WordDocumentButtonProps {
+  onSelectFile: (file: File) => void;
+}
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+const WordDocumentButton: React.FC<WordDocumentButtonProps> = ({ onSelectFile }) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
+  
+    console.log('File selected:', file);
+  
     if (file) {
-      setSelectedFile(file);
-
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        // e.target.result contains the contents of the file as a data URL
-        const fileContent = e.target?.result as string;
-        console.log('File Content:', fileContent);
-      };
-
-      // Read the content of the selected file as a data URL
-      reader.readAsDataURL(file);
+      // Send the file to the server using the Fetch API
+      const formData = new FormData();
+      formData.append('wordDocument', file);
+  
+      try {
+        const response = await fetch('http://localhost:5173/upload', {
+          method: 'POST',
+          body: formData,
+        });
+  
+        // Check if the response has JSON data before attempting to parse
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const data = await response.json();
+          console.log(data);
+        } else {
+          console.error('Unexpected response format:', response);
+        }
+  
+        // Notify the parent component about the selected file
+        onSelectFile(file);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      }
     }
   };
+  
 
   return (
     <div>
-      <input
-        type="file"
-        accept=".doc, .docx"
-        onChange={handleFileChange}
-      />
-      <button disabled={!selectedFile}>Upload Word Document</button>
+      <input type="file" accept=".doc, .docx" onChange={handleFileChange} />
+      <button>Upload Word Document</button>
     </div>
   );
 };
